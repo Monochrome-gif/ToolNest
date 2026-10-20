@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ToolNest: free online tools</title>
+  <meta name="description" content="ToolNest has six free tools that run in your browser: word counter, password generator, JSON formatter, colour converter, unit converter and Base64 encoder.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+/* ToolNest styles. Change the colours here and the whole site follows. */
+:root{--bg:#0f1020;--surface:#171936;--line:#2b2e55;--text:#ecedf6;--muted:#a3a6cc;--c:#9b7bff}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:1rem}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:400 1rem/1.6 "DM Sans",system-ui,sans-serif}
+h1,h2,.logo,.stat b,.result{font-family:"Bricolage Grotesque","DM Sans",system-ui,sans-serif;letter-spacing:-.02em}
+.wrap{width:min(1080px,100% - 2.5rem);margin-inline:auto}
+
+/* Header and hero */
+.top{padding:1.25rem 0}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.logo{display:flex;align-items:center;gap:.6rem;font-size:1.4rem;font-weight:800;color:inherit;text-decoration:none}
+.top small{color:var(--muted)}
+.hero{padding:2.5rem 0 1rem}
+.hero h1{max-width:15ch;margin:0 0 1rem;font-size:clamp(2.4rem,7vw,4.4rem);font-weight:800;line-height:1.02}
+.hero p{max-width:52ch;margin:0 0 2rem;color:var(--muted);font-size:1.1rem}
+
+/* Tool tiles: each tool has its own accent colour (--c) */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem}
+.tile{display:flex;align-items:center;gap:.85rem;padding:1rem;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:16px;text-decoration:none;transition:border-color .2s,background .2s}
+.tile:hover,.tile[aria-current=true]{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--surface))}
+.ico{flex:none;display:grid;place-items:center;width:2.7rem;height:2.7rem;border-radius:12px;background:var(--c);color:var(--bg);font-size:.95rem;font-weight:800}
+.tile b{display:block;font-weight:600}
+.tile .d{display:block;color:var(--muted);font-size:.88rem;line-height:1.35}
+
+/* Tool panels */
+.tool{margin:2rem 0 3rem;padding:clamp(1.25rem,4vw,2.25rem);background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:20px;animation:in .25s ease-out}
+@keyframes in{from{opacity:0;transform:translateY(8px)}}
+.tool h2{margin:0 0 .25rem;font-size:1.8rem}
+.lead{margin:0 0 1.25rem;color:var(--muted)}
+
+/* Form controls */
+label{display:block;margin:0 0 .35rem;font-weight:500}
+textarea,input[type=text],input[type=number],select{width:100%;padding:.7rem .85rem;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:10px;font:inherit}
+textarea{min-height:11rem;resize:vertical;font:.92rem/1.5 ui-monospace,Menlo,Consolas,monospace}
+input[type=color]{width:100%;height:2.9rem;padding:.2rem;background:var(--bg);border:1px solid var(--line);border-radius:10px;cursor:pointer}
+input[type=range],input[type=checkbox]{accent-color:var(--c)}
+:is(a,button,input,select,textarea):focus-visible{outline:3px solid var(--c);outline-offset:2px}
+.btn{padding:.7rem 1.2rem;background:var(--c);color:var(--bg);border:1px solid var(--c);border-radius:10px;font:600 1rem "DM Sans",system-ui,sans-serif;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--c)}
+.btns,.row,.out,.checks{display:flex;flex-wrap:wrap;gap:.6rem}
+.btns{margin:1rem 0}
+.row{align-items:end;margin:1rem 0}.row>*{flex:1 1 9rem}
+.out{margin:.5rem 0}.out input{flex:1 1 12rem;font-family:ui-monospace,Menlo,Consolas,monospace}
+.checks{gap:.5rem 1.5rem;margin:1rem 0}
+.checks label{display:flex;align-items:center;gap:.45rem;margin:0;font-weight:400}
+.err{min-height:1.5rem;margin:.5rem 0 0;color:#ff8a8a}
+
+/* Results */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr));gap:.8rem;margin-top:1rem}
+.stat{padding:.9rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:12px}
+.stat b{display:block;color:var(--c);font-size:1.8rem;font-weight:800}
+.stat span{color:var(--muted);font-size:.88rem}
+.pw{font-size:1.15rem;font-weight:600}
+.meter{height:8px;margin:.5rem 0;background:var(--bg);border-radius:99px;overflow:hidden}
+.meter i{display:block;width:0;height:100%;background:var(--c);transition:width .25s,background .25s}
+.swatch{height:5.5rem;margin-bottom:1rem;border:1px solid var(--line);border-radius:14px}
+.result{margin:1rem 0 0;font-size:1.6rem;font-weight:600}
+footer{padding:1.5rem 0;color:var(--muted);font-size:.9rem;border-top:1px solid var(--line)}
+
+@media(max-width:760px){.tiles{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.tiles{grid-template-columns:1fr}.top small{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="logo" href="#">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="6" cy="8" r="4" fill="#ff6b6b"/><circle cx="14" cy="8" r="4" fill="#ffc857"/><circle cx="22" cy="8" r="4" fill="#3ddc97"/><circle cx="6" cy="20" r="4" fill="#4cc9f0"/><circle cx="14" cy="20" r="4" fill="#9b7bff"/><circle cx="22" cy="20" r="4" fill="#ff5fa2"/></svg>
+        ToolNest
+      </a>
+      <small>Runs in your browser. Nothing is uploaded.</small>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Small tools for everyday jobs.</h1>
+      <p>Count words, make passwords, tidy JSON, convert colours and units, and encode Base64. Pick a tool to start.</p>
+      <nav class="tiles" aria-label="Tools">
+        <a class="tile" href="#words" style="--c:#ff6b6b"><span class="ico" aria-hidden="true">Aa</span><span><b>Word counter</b><span class="d">Words, characters, reading time</span></span></a>
+        <a class="tile" href="#password" style="--c:#ffc857"><span class="ico" aria-hidden="true">***</span><span><b>Password generator</b><span class="d">Strong, random, private</span></span></a>
+        <a class="tile" href="#json" style="--c:#3ddc97"><span class="ico" aria-hidden="true">{ }</span><span><b>JSON formatter</b><span class="d">Validate, format, minify</span></span></a>
+        <a class="tile" href="#colour" style="--c:#4cc9f0"><span class="ico" aria-hidden="true">#</span><span><b>Colour converter</b><span class="d">HEX to RGB and HSL</span></span></a>
+        <a class="tile" href="#units" style="--c:#9b7bff"><span class="ico" aria-hidden="true">&harr;</span><span><b>Unit converter</b><span class="d">Length, weight, temperature</span></span></a>
+        <a class="tile" href="#base64" style="--c:#ff5fa2"><span class="ico" aria-hidden="true">64</span><span><b>Base64 encoder</b><span class="d">Encode and decode text</span></span></a>
+      </nav>
+    </section>
+
+    <!-- 1. Word counter -->
+    <section class="tool" id="words" style="--c:#ff6b6b" hidden>
+      <h2>Word counter</h2>
+      <p class="lead">Type or paste text to see the counts update as you write.</p>
+      <label for="wc-in">Your text</label>
+      <textarea id="wc-in" placeholder="Start typing or paste text here"></textarea>
+      <div class="stats">
+        <div class="stat"><b id="wc-words">0</b><span>Words</span></div>
+        <div class="stat"><b id="wc-chars">0</b><span>Characters</span></div>
+        <div class="stat"><b id="wc-nospace">0</b><span>Without spaces</span></div>
+        <div class="stat"><b id="wc-sent">0</b><span>Sentences</span></div>
+        <div class="stat"><b id="wc-read">0 min</b><span>Reading time</span></div>
+      </div>
+    </section>
+
+    <!-- 2. Password generator -->
+    <section class="tool" id="password" style="--c:#ffc857" hidden>
+      <h2>Password generator</h2>
+      <p class="lead">Passwords are made with your browser's secure random generator and never leave this page.</p>
+      <label for="pw-out">Your password</label>
+      <div class="out">
+        <input id="pw-out" class="pw" type="text" readonly>
+        <button class="btn" data-copy="pw-out">Copy</button>
+        <button class="btn ghost" id="pw-new">Regenerate</button>
+      </div>
+      <div class="meter"><i id="pw-bar"></i></div>
+      <p class="lead" id="pw-str" aria-live="polite"></p>
+      <label for="pw-len">Length: <output id="pw-lenv">16</output></label>
+      <input id="pw-len" type="range" min="8" max="64" value="16" style="width:100%">
+      <div class="checks">
+        <label><input type="checkbox" id="pw-upper" checked> Uppercase</label>
+        <label><input type="checkbox" id="pw-lower" checked> Lowercase</label>
+        <label><input type="checkbox" id="pw-num" checked> Numbers</label>
+        <label><input type="checkbox" id="pw-sym" checked> Symbols</label>
+      </div>
+    </section>
+
+    <!-- 3. JSON formatter -->
+    <section class="tool" id="json" style="--c:#3ddc97" hidden>
+      <h2>JSON formatter</h2>
+      <p class="lead">Check JSON for errors, then make it easy to read or as small as possible.</p>
+      <label for="js-in">JSON input</label>
+      <textarea id="js-in" placeholder='{"name":"ToolNest","tools":6}'></textarea>
+      <div class="btns">
+        <button class="btn" id="js-fmt">Format</button>
+        <button class="btn ghost" id="js-min">Minify</button>
+        <select id="js-indent" aria-label="Indent size" style="width:auto"><option value="2">2 spaces</option><option value="4">4 spaces</option></select>
+      </div>
+      <p class="err" id="js-err" role="alert"></p>
+      <label for="js-out">Result</label>
+      <textarea id="js-out" readonly></textarea>
+      <div class="btns"><button class="btn ghost" data-copy="js-out">Copy result</button></div>
+    </section>
+
+    <!-- 4. Colour converter -->
+    <section class="tool" id="colour" style="--c:#4cc9f0" hidden>
+      <h2>Colour converter</h2>
+      <p class="lead">Pick a colour or type a HEX code to get matching RGB and HSL values.</p>
+      <div class="swatch" id="cc-swatch"></div>
+      <div class="row">
+        <div><label for="cc-pick">Picker</label><input id="cc-pick" type="color" value="#4cc9f0"></div>
+        <div><label for="cc-hex">HEX code</label><input id="cc-hex" type="text" value="#4cc9f0" maxlength="7" spellcheck="false"></div>
+      </div>
+      <p class="err" id="cc-err" role="alert"></p>
+      <div class="out"><input id="cc-o-hex" type="text" readonly aria-label="HEX"><button class="btn ghost" data-copy="cc-o-hex">Copy</button></div>
+      <div class="out"><input id="cc-o-rgb" type="text" readonly aria-label="RGB"><button class="btn ghost" data-copy="cc-o-rgb">Copy</button></div>
+      <div class="out"><input id="cc-o-hsl" type="text" readonly aria-label="HSL"><button class="btn ghost" data-copy="cc-o-hsl">Copy</button></div>
+    </section>
+
+    <!-- 5. Unit converter -->
+    <section class="tool" id="units" style="--c:#9b7bff" hidden>
+      <h2>Unit converter</h2>
+      <p class="lead">Convert length, weight and temperature.</p>
+      <div class="row">
+        <div><label for="un-cat">Type</label><select id="un-cat"></select></div>
+        <div><label for="un-val">Value</label><input id="un-val" type="number" value="1" step="any"></div>
+      </div>
+      <div class="row">
+        <div><label for="un-from">From</label><select id="un-from"></select></div>
+        <button class="btn ghost" id="un-swap" style="flex:0 0 auto">Swap</button>
+        <div><label for="un-to">To</label><select id="un-to"></select></div>
+      </div>
+      <p class="result" id="un-out" aria-live="polite"></p>
+    </section>
+
+    <!-- 6. Base64 encoder -->
+    <section class="tool" id="base64" style="--c:#ff5fa2" hidden>
+      <h2>Base64 encoder</h2>
+      <p class="lead">Encode text to Base64 or decode it back. Emoji and accented letters work too.</p>
+      <label for="b6-in">Input</label>
+      <textarea id="b6-in" placeholder="Type text to encode, or paste Base64 to decode"></textarea>
+      <div class="btns">
+        <button class="btn" id="b6-enc">Encode</button>
+        <button class="btn ghost" id="b6-dec">Decode</button>
+      </div>
+      <p class="err" id="b6-err" role="alert"></p>
+      <label for="b6-out">Result</label>
+      <textarea id="b6-out" readonly></textarea>
+      <div class="btns"><button class="btn ghost" data-copy="b6-out">Copy result</button></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">ToolNest. All tools run on your device, so your text, passwords and files stay with you.</div>
+  </footer>
+  <script>
+// ToolNest: plain JavaScript, no libraries. Each tool is its own labelled block.
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+/* ---------- Navigation: the URL hash picks the tool (#words, #json ...) ---------- */
+const tools = $$('.tool');
+const tiles = $$('.tile');
+
+function showTool() {
+  const wanted = location.hash.slice(1);
+  const id = tools.some(t => t.id === wanted) ? wanted : tools[0].id;
+  tools.forEach(t => (t.hidden = t.id !== id));
+  tiles.forEach(a => a.setAttribute('aria-current', a.hash === '#' + id));
+}
+addEventListener('hashchange', showTool);
+showTool();
+
+/* ---------- Shared helper: any button with data-copy="inputId" copies that field ---------- */
+async function copyText(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const t = document.createElement('textarea'); // fallback for file:// and older browsers
+    t.value = text; document.body.append(t); t.select();
+    document.execCommand('copy'); t.remove();
+  }
+  btn.dataset.label ??= btn.textContent;
+  btn.textContent = 'Copied';
+  setTimeout(() => (btn.textContent = btn.dataset.label), 1400);
+}
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-copy]');
+  if (btn) copyText($('#' + btn.dataset.copy).value, btn);
+});
+
+/* ---------- 1. Word counter ---------- */
+$('#wc-in').addEventListener('input', e => {
+  const text = e.target.value;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  $('#wc-words').textContent = words.toLocaleString();
+  $('#wc-chars').textContent = text.length.toLocaleString();
+  $('#wc-nospace').textContent = text.replace(/\s/g, '').length.toLocaleString();
+  $('#wc-sent').textContent = (text.match(/[^.!?]+[.!?]+(\s|$)/g) || []).length;
+  $('#wc-read').textContent = (words ? Math.max(1, Math.round(words / 200)) : 0) + ' min';
+});
+
+/* ---------- 2. Password generator ---------- */
+const SETS = {
+  upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  lower: 'abcdefghijklmnopqrstuvwxyz',
+  num: '0123456789',
+  sym: '!@#$%^&*()-_=+[]{};:,.?'
+};
+
+// Unbiased random integer below max, using the browser's secure generator.
+function randInt(max) {
+  const buf = new Uint32Array(1);
+  const limit = Math.floor(2 ** 32 / max) * max;
+  do crypto.getRandomValues(buf); while (buf[0] >= limit);
+  return buf[0] % max;
+}
+
+function makePassword() {
+  const len = +$('#pw-len').value;
+  $('#pw-lenv').textContent = len;
+  const active = Object.keys(SETS).filter(k => $('#pw-' + k).checked);
+  const bar = $('#pw-bar'), note = $('#pw-str');
+  if (!active.length) {
+    $('#pw-out').value = ''; bar.style.width = '0';
+    note.textContent = 'Select at least one character type.';
+    return;
+  }
+  const pool = active.map(k => SETS[k]).join('');
+  const chars = active.map(k => SETS[k][randInt(SETS[k].length)]); // one from each chosen type
+  while (chars.length < len) chars.push(pool[randInt(pool.length)]);
+  for (let i = chars.length - 1; i > 0; i--) {                      // shuffle (Fisher-Yates)
+    const j = randInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  $('#pw-out').value = chars.join('');
+
+  const bits = len * Math.log2(pool.length);
+  const [label, colour] = bits < 45 ? ['Weak', '#ff6b6b'] : bits < 65 ? ['Fair', '#ffc857']
+                        : bits < 90 ? ['Good', '#4cc9f0'] : ['Strong', '#3ddc97'];
+  bar.style.width = Math.min(100, bits / 1.28) + '%';
+  bar.style.background = colour;
+  note.textContent = `${label} (about ${Math.round(bits)} bits of randomness)`;
+}
+$('#pw-new').addEventListener('click', makePassword);
+$('#pw-len').addEventListener('input', makePassword);
+$$('.checks input').forEach(c => c.addEventListener('change', makePassword));
+makePassword();
+
+/* ---------- 3. JSON formatter ---------- */
+function runJson(minify) {
+  const input = $('#js-in').value, out = $('#js-out'), err = $('#js-err');
+  err.textContent = ''; out.value = '';
+  if (!input.trim()) return;
+  try {
+    const space = minify ? 0 : +$('#js-indent').value;
+    out.value = JSON.stringify(JSON.parse(input), null, space);
+  } catch (e) {
+    err.textContent = 'Invalid JSON: ' + e.message;
+  }
+}
+$('#js-fmt').addEventListener('click', () => runJson(false));
+$('#js-min').addEventListener('click', () => runJson(true));
+
+/* ---------- 4. Colour converter ---------- */
+function toColour(value) {
+  let hex = value.trim().replace(/^#/, '');
+  if (/^[0-9a-f]{3}$/i.test(hex)) hex = hex.replace(/./g, '$&$&'); // #4cf -> #44ccff
+  if (!/^[0-9a-f]{6}$/i.test(hex)) return null;
+  const n = parseInt(hex, 16);
+  const r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const [R, G, B] = [r / 255, g / 255, b / 255];
+  const max = Math.max(R, G, B), min = Math.min(R, G, B), d = max - min;
+  let h = 0;
+  if (d) {
+    h = max === R ? ((G - B) / d) % 6 : max === G ? (B - R) / d + 2 : (R - G) / d + 4;
+    h = Math.round(h * 60); if (h < 0) h += 360;
+  }
+  const l = (max + min) / 2;
+  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  return {
+    hex: '#' + hex.toLowerCase(),
+    rgb: `rgb(${r}, ${g}, ${b})`,
+    hsl: `hsl(${h}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`
+  };
+}
+function updateColour(value) {
+  const c = toColour(value);
+  $('#cc-err').textContent = c ? '' : 'Enter a valid HEX code, such as #4cc9f0 or #4cf.';
+  if (!c) return;
+  $('#cc-swatch').style.background = c.hex;
+  $('#cc-pick').value = c.hex;
+  $('#cc-o-hex').value = c.hex; $('#cc-o-rgb').value = c.rgb; $('#cc-o-hsl').value = c.hsl;
+}
+$('#cc-pick').addEventListener('input', e => { $('#cc-hex').value = e.target.value; updateColour(e.target.value); });
+$('#cc-hex').addEventListener('input', e => updateColour(e.target.value));
+updateColour($('#cc-hex').value);
+
+/* ---------- 5. Unit converter ---------- */
+// Length and weight store "how many base units in one of these" (metres, kilograms).
+const UNITS = {
+  Length: { m: 1, km: 1000, cm: 0.01, mm: 0.001, mi: 1609.344, yd: 0.9144, ft: 0.3048, in: 0.0254 },
+  Weight: { kg: 1, g: 0.001, mg: 1e-6, lb: 0.45359237, oz: 0.028349523125 },
+  Temperature: { '°C': 0, '°F': 0, K: 0 } // handled by formulas below
+};
+const catSel = $('#un-cat'), fromSel = $('#un-from'), toSel = $('#un-to');
+const fmt = n => Number(n.toPrecision(10)).toLocaleString(undefined, { maximumFractionDigits: 8 });
+
+function convert() {
+  const cat = catSel.value, from = fromSel.value, to = toSel.value;
+  const v = parseFloat($('#un-val').value), out = $('#un-out');
+  if (Number.isNaN(v)) { out.textContent = 'Enter a number to convert.'; return; }
+  let result;
+  if (cat === 'Temperature') {
+    const c = from === '°C' ? v : from === '°F' ? (v - 32) * 5 / 9 : v - 273.15; // to Celsius first
+    result = to === '°C' ? c : to === '°F' ? c * 9 / 5 + 32 : c + 273.15;
+  } else {
+    result = v * UNITS[cat][from] / UNITS[cat][to];
+  }
+  out.textContent = `${fmt(v)} ${from} = ${fmt(result)} ${to}`;
+}
+function fillUnits() {
+  const options = Object.keys(UNITS[catSel.value]).map(u => `<option>${u}</option>`).join('');
+  fromSel.innerHTML = toSel.innerHTML = options;
+  toSel.selectedIndex = 1;
+  convert();
+}
+catSel.innerHTML = Object.keys(UNITS).map(k => `<option>${k}</option>`).join('');
+catSel.addEventListener('change', fillUnits);
+['input', 'change'].forEach(ev => {
+  $('#un-val').addEventListener(ev, convert);
+  fromSel.addEventListener(ev, convert);
+  toSel.addEventListener(ev, convert);
+});
+$('#un-swap').addEventListener('click', () => {
+  [fromSel.value, toSel.value] = [toSel.value, fromSel.value];
+  convert();
+});
+fillUnits();
+
+/* ---------- 6. Base64 encoder / decoder (UTF-8 safe) ---------- */
+function encodeB64(text) {
+  let binary = '';
+  new TextEncoder().encode(text).forEach(b => (binary += String.fromCharCode(b)));
+  return btoa(binary);
+}
+function decodeB64(b64) {
+  const binary = atob(b64.trim());
+  return new TextDecoder().decode(Uint8Array.from(binary, ch => ch.charCodeAt(0)));
+}
+function runB64(fn) {
+  const err = $('#b6-err'), out = $('#b6-out');
+  err.textContent = ''; out.value = '';
+  try { out.value = fn($('#b6-in').value); }
+  catch { err.textContent = 'That is not valid Base64, so it cannot be decoded.'; }
+}
+$('#b6-enc').addEventListener('click', () => runB64(encodeB64));
+$('#b6-dec').addEventListener('click', () => runB64(decodeB64));
+  </script>
+</body>
+</html>
